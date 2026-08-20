@@ -5,11 +5,16 @@
 </p>
 
 <p align="center">
+  <a href="https://shinelee2014.github.io/watermark-studio-pro/"><img src="https://img.shields.io/badge/Online%20Demo-Live%20Now-success?style=for-the-badge&logo=githubpages&logoColor=white" alt="Live Demo"></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/Platform-GitHub%20Pages%20%7C%20Local-10b981.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Status-Production%20Ready-success.svg" alt="Status">
   <img src="https://img.shields.io/badge/Privacy-100%25%20In--Browser%20Memory-purple.svg" alt="Privacy">
 </p>
+
+> 🌐 **在线即刻体验网址**：[https://shinelee2014.github.io/watermark-studio-pro/](https://shinelee2014.github.io/watermark-studio-pro/)
 
 ---
 
