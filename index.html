@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watermark Studio Pro · 专业图像去水印工作台 (GitHub Pages 版)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- 异步按需加载 Tesseract.js OCR 引擎 (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" async></script>
+<style>
+  :root {
+    --bg-base: #0c0e12;
+    --bg-surface: #14171d;
+    --bg-elevated: #1b2028;
+    --bg-hover: #242b36;
+    --bg-active: #2e3644;
+    --line: #272f3d;
+    --line-subtle: #1e2430;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --brand: #3b82f6;
+    --brand-hover: #60a5fa;
+    --brand-glow: rgba(59, 130, 246, 0.28);
+    --accent: #10b981;
+    --accent-glow: rgba(16, 185, 129, 0.2);
+    --danger: #f43f5e;
+    --mask-color: rgba(244, 63, 94, 0.55);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+    --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* 顶部导航栏 */
+  header {
+    height: 52px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    z-index: 40;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-badge {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 14px var(--brand-glow);
+  }
+  .brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-title .tag {
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .top-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .top-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: #3b4252;
+  }
+  .top-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .top-btn.primary {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 10px var(--brand-glow);
+  }
+  .top-btn.primary:hover:not(:disabled) {
+    background: var(--brand-hover);
+    border-color: var(--brand-hover);
+  }
+  .top-btn.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #34d399;
+  }
+
+  /* 主体工作区布局 */
+  .workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 左侧工具箱 */
+  .toolbar-left {
+    width: 60px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 8px;
+    z-index: 20;
+  }
+  .tool-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+  .tool-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .tool-btn .hotkey {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+  .tool-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-main);
+  }
+  .tool-btn.active {
+    background: var(--brand-glow);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: var(--brand-hover);
+  }
+  .tool-divider {
+    width: 28px;
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0;
+  }
+
+  /* 中间主画布视口 */
+  .viewport-container {
+    flex: 1;
+    background: radial-gradient(circle at 50% 50%, #15181f 0%, #090a0d 100%);
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+  .viewport-container.panning { cursor: grab; }
+  .viewport-container.is-panning { cursor: grabbing; }
+
+  .canvas-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background-image: 
+      linear-gradient(45deg, #181c24 25%, transparent 25%), 
+      linear-gradient(-45deg, #181c24 25%, transparent 25%), 
+      linear-gradient(45deg, transparent 75%, #181c24 75%), 
+      linear-gradient(-45deg, transparent 75%, #181c24 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    background-color: #12141a;
+  }
+  #viewCanvas {
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+  }
+
+  #brushCursor {
+    position: absolute;
+    pointer-events: none;
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    background: rgba(244, 63, 94, 0.25);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    z-index: 30;
+    box-shadow: 0 0 4px rgba(0,0,0,0.6), inset 0 0 4px rgba(0,0,0,0.3);
+  }
+
+  #marqueeBox {
+    position: absolute;
+    border: 1.5px dashed #38bdf8;
+    background: rgba(56, 189, 248, 0.2);
+    pointer-events: none;
+    display: none;
+    z-index: 30;
+  }
+
+  .compare-slider-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: #ffffff;
+    pointer-events: none;
+    display: none;
+    z-index: 32;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  }
+  .compare-slider-line .split-label-left {
+    position: absolute;
+    top: 14px; right: 10px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(56,189,248,0.3);
+    white-space: nowrap;
+  }
+  .compare-slider-line .split-label-right {
+    position: absolute;
+    top: 14px; left: 10px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(52,211,153,0.3);
+    white-space: nowrap;
+  }
+
+  .drop-overlay {
+    position: absolute;
+    inset: 20px;
+    border: 2px dashed var(--line);
+    border-radius: var(--radius-lg);
+    background: rgba(20, 23, 29, 0.75);
+    backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 25;
+  }
+  .drop-overlay:hover, .drop-overlay.drag-over {
+    border-color: var(--brand);
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--text-main);
+  }
+  .drop-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--brand);
+    box-shadow: var(--shadow-sm);
+  }
+  .drop-icon svg { width: 32px; height: 32px; stroke-width: 1.8; }
+  .drop-overlay h3 { font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+  .drop-overlay p { font-size: 13px; color: var(--text-dim); text-align: center; max-width: 340px; }
+  .drop-overlay .hotkeys-hint {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .key-badge {
+    background: var(--bg-hover);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+  }
+
+  .viewport-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 23, 29, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow-md);
+    z-index: 35;
+  }
+  .vp-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vp-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+  .vp-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .zoom-label {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-main);
+    min-width: 46px;
+    text-align: center;
+  }
+  .vp-divider { width: 1px; height: 16px; background: var(--line); margin: 0 2px; }
+
+  /* 右侧面板 */
+  .sidebar-right {
+    width: 320px;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 20;
+  }
+  .panel-section {
+    padding: 15px;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* 文字水印智能定位盒 */
+  .text-remover-box {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .text-input-wrap {
+    position: relative;
+    display: flex;
+  }
+  .text-input {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--line);
+    color: var(--text-main);
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .text-input:focus { border-color: var(--brand); }
+  .chip-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    font-size: 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--line);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .chip:hover {
+    background: var(--brand-glow);
+    border-color: rgba(59,130,246,0.3);
+    color: var(--brand-hover);
+  }
+
+  /* 方位快捷选择 */
+  .pos-hint-row {
+    display: flex;
+    gap: 4px;
+  }
+  .pos-btn {
+    flex: 1;
+    font-size: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 3px 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+  }
+  .pos-btn:hover, .pos-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--brand);
+    color: var(--brand-hover);
+  }
+
+  .text-action-row {
+    display: flex;
+    gap: 6px;
+  }
+  .btn-text-locate {
+    flex: 1;
+    background: var(--bg-hover);
+    border: 1px solid var(--line);
+    color: var(--text-main);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .btn-text-locate:hover:not(:disabled) { background: #323b49; border-color: #4b5563; }
+  .btn-text-ocr {
+    flex: 1;
+    background: rgba(139, 92, 246, 0.18);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #c084fc;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .btn-text-ocr:hover:not(:disabled) { background: rgba(139, 92, 246, 0.28); }
+  .btn-text-auto {
+    width: 100%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+  .btn-text-auto:hover:not(:disabled) { background: linear-gradient(135deg, #059669, #047857); }
+  .btn-text-locate:disabled, .btn-text-ocr:disabled, .btn-text-auto:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* 基础控件 */
+  .control-group { margin-bottom: 12px; }
+  .control-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .control-label .val-tag {
+    font-family: var(--font-mono);
+    color: var(--brand-hover);
+    font-weight: 600;
+  }
+  input[type="range"] {
+    width: 100%;
+    height: 5px;
+    background: var(--bg-active);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--brand);
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--brand-glow);
+    border: 2px solid #fff;
+  }
+
+  .algorithm-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .algo-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .algo-card.active {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: var(--brand);
+  }
+  .algo-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .algo-desc { font-size: 11px; color: var(--text-dim); }
+
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .preset-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 7px 8px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .preset-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+
+  .action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-run {
+    width: 100%;
+    padding: 11px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px var(--brand-glow);
+  }
+  .btn-run:hover:not(:disabled) { background: linear-gradient(135deg, #1d4ed8, #2563eb); }
+  .btn-run:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-secondary-row { display: flex; gap: 6px; }
+  .btn-sub {
+    flex: 1;
+    padding: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .btn-sub:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-main); }
+  .btn-sub:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .export-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .select-box {
+    flex: 1;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    color: var(--text-main);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    outline: none;
+  }
+
+  footer {
+    height: 28px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    z-index: 40;
+  }
+  .status-left, .status-right { display: flex; align-items: center; gap: 14px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; }
+  .status-dot.active { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.6); }
+  .status-dot.working { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.6); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .progress-wrap {
+    width: 120px; height: 4px;
+    background: var(--bg-active);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-inner { height: 100%; width: 0%; background: var(--brand); }
+
+  .toast {
+    position: fixed;
+    bottom: 40px;
+    right: 340px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    color: var(--text-main);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: rgba(16, 185, 129, 0.5); color: #34d399; }
+  .toast.error { border-color: rgba(244, 63, 94, 0.5); color: #fb7185; }
+
+  #hiddenFileInput { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-group">
+    <div class="logo-badge">🧽</div>
+    <div class="brand-title">
+      Watermark Studio Pro
+      <span class="tag">GitHub Pages v2.2</span>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <a href="watermark-remover-pro-local.html" class="top-btn" title="切换到本地高性能批量去水印版" style="text-decoration:none;">
+      ⚡ 本地批量版
+    </a>
+    <button class="top-btn" id="btnUploadHeader">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      导入图片
+    </button>
+    <button class="top-btn" id="btnUndo" disabled title="撤销 (Ctrl+Z)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      撤销
+    </button>
+    <button class="top-btn" id="btnRedo" disabled title="重做 (Ctrl+Y)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+      重做
+    </button>
+    <button class="top-btn" id="btnCompareToggle" disabled title="前后对比 (按住\键快速对比)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      对比原图
+    </button>
+    <button class="top-btn primary" id="btnDownload" disabled title="导出干净图片 (Ctrl+S)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出图片
+    </button>
+  </div>
+</header>
+
+<div class="workspace">
+  <aside class="toolbar-left">
+    <button class="tool-btn active" id="toolBrush" data-tool="brush" title="涂抹画笔 (B)"><svg viewBox="0 0 24 24"><path d="M18.375 2.625a3.875 3.875 0 0 0-5.48 0L3.5 12v4.5h4.5l9.395-9.395a3.875 3.875 0 0 0 0-5.48z"/></svg><span class="hotkey">B</span></button>
+    <button class="tool-btn" id="toolEraser" data-tool="eraser" title="橡皮擦 (E)"><svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg><span class="hotkey">E</span></button>
+    <button class="tool-btn" id="toolRect" data-tool="rect" title="矩形框选 (R)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/></svg><span class="hotkey">R</span></button>
+    <button class="tool-btn" id="toolWand" data-tool="wand" title="色彩吸附魔棒 (W)"><svg viewBox="0 0 24 24"><path d="m15 4-2 2"/><path d="m15 9 6-6"/><path d="m18 13 2 2"/><path d="m2 22 10-10"/></svg><span class="hotkey">W</span></button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" id="toolPan" data-tool="pan" title="抓手平移 (H / 空格)"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg><span class="hotkey">H</span></button>
+  </aside>
+
+  <main class="viewport-container" id="viewport">
+    <div class="canvas-stage" id="stage">
+      <canvas id="viewCanvas"></canvas>
+      <div id="marqueeBox"></div>
+      <div class="compare-slider-line" id="compareLine">
+        <span class="split-label-left">原图 (修复前)</span>
+        <span class="split-label-right">已修复</span>
+      </div>
+    </div>
+
+    <div id="brushCursor"></div>
+
+    <div class="drop-overlay" id="dropOverlay">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <h3>拖放图片至此处，或点击浏览</h3>
+      <p>支持 PNG, JPG, WebP 格式。全流程在浏览器本地内存中处理，100% 隐私安全。</p>
+    </div>
+
+    <div class="viewport-controls">
+      <button class="vp-btn" id="btnZoomOut"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <span class="zoom-label" id="zoomLevel">100%</span>
+      <button class="vp-btn" id="btnZoomIn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <div class="vp-divider"></div>
+      <button class="vp-btn" id="btnZoomFit"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <button class="vp-btn" id="btnZoom100"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M9 10l3-2"/></svg></button>
+    </div>
+  </main>
+
+  <aside class="sidebar-right">
+    <!-- 文字水印智能消除模块 -->
+    <div class="panel-section">
+      <div class="section-header">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+          文字水印智能消除
+        </div>
+      </div>
+
+      <div class="text-remover-box">
+        <div class="text-input-wrap">
+          <input type="text" class="text-input" id="inputTextWatermark" placeholder="输入水印文字 (如 AI生成)" value="AI生成">
+        </div>
+        <div class="chip-row">
+          <span class="chip" data-txt="AI生成">AI生成</span>
+          <span class="chip" data-txt="AI Generated">AI Generated</span>
+          <span class="chip" data-txt="小红书">小红书</span>
+          <span class="chip" data-txt="知乎">知乎</span>
+        </div>
+
+        <div class="pos-hint-row">
+          <button class="pos-btn active" data-pos="auto">全图扫描</button>
+          <button class="pos-btn" data-pos="bottom-left">📍 偏左下</button>
+          <button class="pos-btn" data-pos="bottom-right">📍 偏右下</button>
+          <button class="pos-btn" data-pos="bottom-center">📍 偏中下</button>
+        </div>
+
+        <div class="text-action-row">
+          <button class="btn-text-locate" id="btnLocateText" disabled title="毫秒级边缘特征扫描定位">🔍 边缘定位</button>
+          <button class="btn-text-ocr" id="btnOcrText" disabled title="调用浏览器 OCR 深度识别坐标">🎯 深度 OCR</button>
+        </div>
+        <button class="btn-text-auto" id="btnAutoRemoveText" disabled title="自动定位并立即清除文字水印">⚡ 一键定位并清除</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-header">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/></svg>
+          常规工具参数
+        </div>
+      </div>
+      <div class="control-group" id="groupBrushSize">
+        <div class="control-label">
+          <span>笔刷粗细 [ / ]</span>
+          <span class="val-tag" id="valBrushSize">30 px</span>
+        </div>
+        <input type="range" id="inputBrushSize" min="4" max="200" value="30">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>一键角标预设</span></div>
+        <div class="preset-grid">
+          <button class="preset-btn" id="presetGemini">✨ Gemini 星标</button>
+          <button class="preset-btn" id="presetAIText">🏷️ 右下角「AI生成」</button>
+          <button class="preset-btn" id="presetBottomLeft">📍 左下角区域</button>
+          <button class="preset-btn" id="presetBottomRight">📍 右下角通用</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-header">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          修复算法引擎
+        </div>
+      </div>
+      <div class="algorithm-cards">
+        <div class="algo-card active" data-engine="telea">
+          <div class="algo-title"><span>Telea 快速行进法 (FMM)</span><span class="tag-rec" style="font-size:9px; background:rgba(16,185,129,0.2); color:#34d399; padding:1px 5px; border-radius:3px;">高保真推荐</span></div>
+          <div class="algo-desc">沿法线与梯度插值，保全背景细节，消除毛玻璃模糊。</div>
+        </div>
+        <div class="algo-card" data-engine="anisotropic">
+          <div class="algo-title"><span>边缘感知扩散 (Laplacian)</span></div>
+          <div class="algo-desc">偏微分调和扩散求解，适合平坦渐变背景。</div>
+        </div>
+        <div class="algo-card" data-engine="reverse_alpha">
+          <div class="algo-title"><span>AI 半透明逆 Alpha 还原</span></div>
+          <div class="algo-desc">代数逆变换，针对半透明水印 100% 像素级无损还原。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="action-stack">
+        <button class="btn-run" id="btnExecute" disabled>一键去除水印</button>
+        <div class="btn-secondary-row">
+          <button class="btn-sub" id="btnClearMask" disabled>清空选区 (Esc)</button>
+          <button class="btn-sub" id="btnResetImage" disabled>还原至原图</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-header">
+        <div class="section-title">导出格式</div>
+      </div>
+      <div class="export-row">
+        <select class="select-box" id="exportFormat">
+          <option value="png">PNG 无损格式</option>
+          <option value="jpeg">JPG 压缩格式</option>
+          <option value="webp" selected>WebP 现代格式 (推荐)</option>
+        </select>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <div class="status-left">
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">就绪 · 等待导入图片</span>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-inner" id="progressInner"></div>
+    </div>
+  </div>
+  <div class="status-right">
+    <span id="infoDim">- x - px</span>
+    <span id="infoCalcTime" style="color:#60a5fa;"></span>
+  </div>
+</footer>
+
+<div class="toast" id="toastBox"><span id="toastMsg">操作成功</span></div>
+<input type="file" id="hiddenFileInput" accept="image/png,image/jpeg,image/webp,image/bmp">
+
+<!-- Web Worker 算法计算脚本 -->
+<script id="workerScript" type="text/javascript-worker">
+self.onmessage = function(e) {
+  const { type, roiData, roiMask, roiW, roiH, engine, iters } = e.data;
+  if (type !== 'process') return;
+
+  const t0 = performance.now();
+  const d = roiData.data;
+  const totalPixels = roiW * roiH;
+
+  const maskIndices = [];
+  const maskMap = new Uint8Array(totalPixels);
+  for (let i = 0; i < totalPixels; i++) {
+    if (roiMask[i * 4 + 3] > 10) {
+      maskMap[i] = 1;
+      maskIndices.push(i);
+    }
+  }
+
+  if (maskIndices.length === 0) {
+    self.postMessage({ type: 'done', roiData, duration: 0 });
+    return;
+  }
+
+  if (engine === 'reverse_alpha') {
+    const LOGO_VAL = 255;
+    for (let k = 0; k < maskIndices.length; k++) {
+      const idx = maskIndices[k];
+      const alpha = Math.min(0.92, Math.max(0.08, roiMask[idx * 4 + 3] / 255.0 * 0.85));
+      const oneMinusAlpha = 1.0 - alpha;
+      const pi = idx * 4;
+      d[pi] = Math.min(255, Math.max(0, Math.round((d[pi] - alpha * LOGO_VAL) / oneMinusAlpha)));
+      d[pi + 1] = Math.min(255, Math.max(0, Math.round((d[pi + 1] - alpha * LOGO_VAL) / oneMinusAlpha)));
+      d[pi + 2] = Math.min(255, Math.max(0, Math.round((d[pi + 2] - alpha * LOGO_VAL) / oneMinusAlpha)));
+    }
+  } else if (engine === 'telea') {
+    const flags = new Uint8Array(totalPixels);
+    const dist = new Float32Array(totalPixels);
+    for (let i = 0; i < totalPixels; i++) {
+      if (maskMap[i]) { flags[i] = 2; dist[i] = 1e6; } else { flags[i] = 0; dist[i] = 0; }
+    }
+    const band = [];
+    for (let k = 0; k < maskIndices.length; k++) {
+      const p = maskIndices[k];
+      const x = p % roiW, y = (p - x) / roiW;
+      let isBorder = false;
+      if (x > 0 && flags[p - 1] === 0) isBorder = true;
+      else if (x < roiW - 1 && flags[p + 1] === 0) isBorder = true;
+      else if (y > 0 && flags[p - roiW] === 0) isBorder = true;
+      else if (y < roiH - 1 && flags[p + roiW] === 0) isBorder = true;
+      if (isBorder) { flags[p] = 1; dist[p] = 0; band.push(p); }
+    }
+
+    const radius = 4;
+    while (band.length > 0) {
+      let minIdx = 0, minDist = dist[band[0]];
+      const limit = Math.min(band.length, 40);
+      for (let i = 1; i < limit; i++) {
+        if (dist[band[i]] < minDist) { minDist = dist[band[i]]; minIdx = i; }
+      }
+      const p = band.splice(minIdx, 1)[0];
+      const x = p % roiW, y = (p - x) / roiW;
+
+      let sumR = 0, sumG = 0, sumB = 0, sumW = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= roiH) continue;
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= roiW) continue;
+          const np = ny * roiW + nx;
+          if (flags[np] !== 0) continue;
+
+          const dst = Math.hypot(dx, dy);
+          if (dst > radius) continue;
+          const w = (1.0 / (dst * dst + 0.01)) * (1.0 / (1.0 + Math.abs(dist[p] - dist[np])));
+          const npi = np * 4;
+          sumR += d[npi] * w; sumG += d[npi + 1] * w; sumB += d[npi + 2] * w; sumW += w;
+        }
+      }
+
+      if (sumW === 0) {
+        let bestDist = 1e9, bestP = -1;
+        const searchR = 10;
+        for (let dy = -searchR; dy <= searchR; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= roiH) continue;
+          for (let dx = -searchR; dx <= searchR; dx++) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= roiW) continue;
+            const np = ny * roiW + nx;
+            if (flags[np] === 0) {
+              const d2 = dx * dx + dy * dy;
+              if (d2 < bestDist) { bestDist = d2; bestP = np; }
+            }
+          }
+        }
+        if (bestP !== -1) {
+          sumR = d[bestP * 4]; sumG = d[bestP * 4 + 1]; sumB = d[bestP * 4 + 2]; sumW = 1.0;
+        }
+      }
+
+      const pi = p * 4;
+      if (sumW > 0) {
+        d[pi] = Math.round(sumR / sumW);
+        d[pi + 1] = Math.round(sumG / sumW);
+        d[pi + 2] = Math.round(sumB / sumW);
+      }
+      flags[p] = 0;
+
+      const nbs = [x > 0 ? p - 1 : -1, x < roiW - 1 ? p + 1 : -1, y > 0 ? p - roiW : -1, y < roiH - 1 ? p + roiW : -1];
+      for (let nb of nbs) {
+        if (nb !== -1 && flags[nb] === 2) { flags[nb] = 1; dist[nb] = dist[p] + 1; band.push(nb); }
+      }
+    }
+  } else {
+    const R = new Float32Array(totalPixels), G = new Float32Array(totalPixels), B = new Float32Array(totalPixels);
+    for (let i = 0; i < totalPixels; i++) { R[i] = d[i * 4]; G[i] = d[i * 4 + 1]; B[i] = d[i * 4 + 2]; }
+    for (let it = 0; it < (iters || 80); it++) {
+      for (let k = 0; k < maskIndices.length; k++) {
+        const p = maskIndices[k];
+        const x = p % roiW, y = (p - x) / roiW;
+        let sR = 0, sG = 0, sB = 0, count = 0;
+        if (x > 0) { sR += R[p - 1]; sG += G[p - 1]; sB += B[p - 1]; count++; }
+        if (x < roiW - 1) { sR += R[p + 1]; sG += G[p + 1]; sB += B[p + 1]; count++; }
+        if (y > 0) { sR += R[p - roiW]; sG += G[p - roiW]; sB += B[p - roiW]; count++; }
+        if (y < roiH - 1) { sR += R[p + roiW]; sG += G[p + roiW]; sB += B[p + roiW]; count++; }
+        if (count > 0) { R[p] = sR / count; G[p] = sG / count; B[p] = sB / count; }
+      }
+    }
+    for (let k = 0; k < maskIndices.length; k++) {
+      const p = maskIndices[k], pi = p * 4;
+      d[pi] = Math.round(R[p]); d[pi + 1] = Math.round(G[p]); d[pi + 2] = Math.round(B[p]);
+    }
+  }
+
+  const duration = Math.round(performance.now() - t0);
+  self.postMessage({ type: 'done', roiData, duration });
+};
+</script>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const viewport = $('viewport'), stage = $('stage'), viewCanvas = $('viewCanvas');
+  const ctx = viewCanvas.getContext('2d');
+  const dropOverlay = $('dropOverlay'), hiddenFileInput = $('hiddenFileInput');
+  const brushCursor = $('brushCursor'), marqueeBox = $('marqueeBox'), compareLine = $('compareLine');
+  const toastBox = $('toastBox'), toastMsg = $('toastMsg');
+  const statusDot = $('statusDot'), statusText = $('statusText');
+  const progressWrap = $('progressWrap'), progressInner = $('progressInner');
+  const infoDim = $('infoDim'), infoCalcTime = $('infoCalcTime');
+  const zoomLevel = $('zoomLevel');
+
+  let currentImage = null;
+  let baseCanvas = document.createElement('canvas'), baseCtx = baseCanvas.getContext('2d');
+  let maskCanvas = document.createElement('canvas'), maskCtx = maskCanvas.getContext('2d');
+  let originalCanvas = document.createElement('canvas'), originalCtx = originalCanvas.getContext('2d');
+
+  let activeTool = 'brush', activeEngine = 'telea';
+  let brushSize = 30, wandTolerance = 32;
+  let isComparing = false, compareSplit = 0.5;
+  let selectedPosHint = 'auto';
+
+  let zoom = 1.0, panX = 0, panY = 0;
+  let isPanning = false, panStartX = 0, panStartY = 0, isSpacePressed = false;
+  let isDrawing = false, lastPos = null, rectStart = null;
+
+  const undoStack = [], redoStack = [], MAX_HISTORY = 16;
+
+  const workerBlob = new Blob([$('workerScript').textContent], { type: 'application/javascript' });
+  const worker = new Worker(URL.createObjectURL(workerBlob));
+
+  worker.onmessage = function(e) {
+    const { type, roiData, percent, duration } = e.data;
+    if (type === 'progress') {
+      progressInner.style.width = percent + '%';
+      statusText.textContent = `修复中 · ${percent}%`;
+    } else if (type === 'done') {
+      finishProcessing(roiData, duration);
+    }
+  };
+
+  function updateViewportTransform() {
+    stage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    zoomLevel.textContent = Math.round(zoom * 100) + '%';
+  }
+
+  function resetViewport(fit = true) {
+    if (!currentImage) return;
+    const vRect = viewport.getBoundingClientRect();
+    if (fit) {
+      const pad = 40;
+      const scaleX = (vRect.width - pad * 2) / currentImage.width;
+      const scaleY = (vRect.height - pad * 2) / currentImage.height;
+      zoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.05), 3.0);
+    } else {
+      zoom = 1.0;
+    }
+    panX = (vRect.width - currentImage.width * zoom) / 2;
+    panY = (vRect.height - currentImage.height * zoom) / 2;
+    updateViewportTransform();
+  }
+
+  viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (!currentImage) return;
+    const vRect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - vRect.left, mouseY = e.clientY - vRect.top;
+    const oldZoom = zoom;
+    const delta = e.deltaY < 0 ? 1.15 : 0.87;
+    zoom = Math.min(Math.max(zoom * delta, 0.05), 15.0);
+    panX = mouseX - (mouseX - panX) * (zoom / oldZoom);
+    panY = mouseY - (mouseY - panY) * (zoom / oldZoom);
+    updateViewportTransform();
+  }, { passive: false });
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !isSpacePressed && !['INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+      isSpacePressed = true; viewport.classList.add('panning');
+    }
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
+      else if (e.key === 's' || e.key === 'S') { e.preventDefault(); downloadResult(); }
+      else if (e.key === 'o' || e.key === 'O') { e.preventDefault(); hiddenFileInput.click(); }
+    } else {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (e.key === 'b' || e.key === 'B') selectTool('brush');
+      else if (e.key === 'e' || e.key === 'E') selectTool('eraser');
+      else if (e.key === 'r' || e.key === 'R') selectTool('rect');
+      else if (e.key === 'w' || e.key === 'W') selectTool('wand');
+      else if (e.key === 'h' || e.key === 'H') selectTool('pan');
+      else if (e.key === '[') adjustBrushSize(-4);
+      else if (e.key === ']') adjustBrushSize(4);
+      else if (e.key === 'Escape') clearMask();
+      else if (e.key === '\\') toggleCompare(true);
+    }
+  });
+
+  window.addEventListener('keyup', e => {
+    if (e.code === 'Space') { isSpacePressed = false; viewport.classList.remove('panning', 'is-panning'); }
+    if (e.key === '\\') toggleCompare(false);
+  });
+
+  function initImage(img, fileName = 'image.png', fileSize = 0) {
+    currentImage = img;
+    viewCanvas.width = img.width; viewCanvas.height = img.height;
+    baseCanvas.width = img.width; baseCanvas.height = img.height;
+    maskCanvas.width = img.width; maskCanvas.height = img.height;
+    originalCanvas.width = img.width; originalCanvas.height = img.height;
+
+    baseCtx.drawImage(img, 0, 0);
+    originalCtx.drawImage(img, 0, 0);
+    maskCtx.clearRect(0, 0, img.width, img.height);
+
+    stage.style.width = img.width + 'px';
+    stage.style.height = img.height + 'px';
+
+    dropOverlay.style.display = 'none';
+    resetViewport(true);
+    saveSnapshot('导入图片');
+    render();
+
+    $('btnExecute').disabled = false;
+    $('btnDownload').disabled = false;
+    $('btnClearMask').disabled = false;
+    $('btnResetImage').disabled = false;
+    $('btnCompareToggle').disabled = false;
+    $('btnLocateText').disabled = false;
+    $('btnOcrText').disabled = false;
+    $('btnAutoRemoveText').disabled = false;
+
+    infoDim.textContent = `${img.width} × ${img.height} px`;
+    setAppStatus('active', '已载入，支持文字边缘定位/OCR/画笔选区');
+    showToast('图片载入成功', 'success');
+  }
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return showToast('请选择有效的图片文件', 'error');
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => initImage(img, file.name, file.size);
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  dropOverlay.onclick = () => hiddenFileInput.click();
+  $('btnUploadHeader').onclick = () => hiddenFileInput.click();
+  hiddenFileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+
+  window.addEventListener('paste', e => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let item of items) {
+      if (item.type.indexOf('image') !== -1) { handleFile(item.getAsFile()); break; }
+    }
+  });
+
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  window.addEventListener('dragover', e => e.preventDefault());
+
+  // 方位选择器
+  document.querySelectorAll('.pos-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPosHint = btn.dataset.pos;
+      if (currentImage) locateTextByGradient(false);
+    };
+  });
+
+  // ---- 智能文字边缘与梯度自适应定位 (Smart Gradient & Edge Box Locator) ----
+  function locateTextByGradient(autoRemove = false) {
+    if (!currentImage) return showToast('请先导入图片', 'error');
+    const q = $('inputTextWatermark').value.trim();
+    if (!q) return showToast('请输入水印文字', 'error');
+
+    const w = currentImage.width, h = currentImage.height;
+    const srcData = baseCtx.getImageData(0, 0, w, h).data;
+
+    setAppStatus('working', `正在智能定位「${q}」...`);
+
+    // 定义候选搜索区域
+    const candidateRegions = [];
+    if (selectedPosHint === 'bottom-left' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '左下角', x0: 0, y0: Math.round(h * 0.72), x1: Math.round(w * 0.45), y1: h });
+    }
+    if (selectedPosHint === 'bottom-right' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '右下角', x0: Math.round(w * 0.55), y0: Math.round(h * 0.72), x1: w, y1: h });
+    }
+    if (selectedPosHint === 'bottom-center' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '中下部', x0: Math.round(w * 0.25), y0: Math.round(h * 0.75), x1: Math.round(w * 0.75), y1: h });
+    }
+
+    let bestBox = null;
+    let highestEdgeEnergy = -1;
+
+    for (let reg of candidateRegions) {
+      const regW = reg.x1 - reg.x0, regH = reg.y1 - reg.y0;
+      if (regW <= 10 || regH <= 10) continue;
+
+      // 提取区域边缘能量
+      const edgeMap = new Float32Array(regW * regH);
+      for (let y = 1; y < regH - 1; y++) {
+        for (let x = 1; x < regW - 1; x++) {
+          const gx = (y * regW + (x + 1)) * 4, gx_prev = (y * regW + (x - 1)) * 4;
+          const gy = ((y + 1) * regW + x) * 4, gy_prev = ((y - 1) * regW + x) * 4;
+
+          const img_gx = ((reg.y0 + y) * w + (reg.x0 + x + 1)) * 4;
+          const img_gx_p = ((reg.y0 + y) * w + (reg.x0 + x - 1)) * 4;
+          const img_gy = ((reg.y0 + y + 1) * w + (reg.x0 + x)) * 4;
+          const img_gy_p = ((reg.y0 + y - 1) * w + (reg.x0 + x)) * 4;
+
+          const dx = Math.abs(srcData[img_gx] - srcData[img_gx_p]) + Math.abs(srcData[img_gx + 1] - srcData[img_gx_p + 1]);
+          const dy = Math.abs(srcData[img_gy] - srcData[img_gy_p]) + Math.abs(srcData[img_gy + 1] - srcData[img_gy_p + 1]);
+          edgeMap[y * regW + x] = dx + dy;
+        }
+      }
+
+      // 寻找高边缘密度的文本行窗口 (根据字符数估算长宽比，AI生成4字约 3.0:1)
+      const expectedAspect = Math.max(2.0, q.length * 0.85);
+      const estH = Math.max(16, Math.round(Math.min(w, h) * 0.038));
+      const estW = Math.round(estH * expectedAspect);
+
+      for (let y = 0; y <= regH - estH; y += 4) {
+        for (let x = 0; x <= regW - estW; x += 4) {
+          let sum = 0;
+          for (let dy = 0; dy < estH; dy += 2) {
+            for (let dx = 0; dx < estW; dx += 2) {
+              sum += edgeMap[(y + dy) * regW + (x + dx)];
+            }
+          }
+          if (sum > highestEdgeEnergy) {
+            highestEdgeEnergy = sum;
+            bestBox = { x: reg.x0 + x, y: reg.y0 + y, w: estW, h: estH, energy: sum, region: reg.name };
+          }
+        }
+      }
+    }
+
+    // 若低对比度未能显著分化，采用选定区域的自适应默认位置
+    if (!bestBox || highestEdgeEnergy < 10) {
+      if (selectedPosHint === 'bottom-left') {
+        const boxW = Math.round(w * 0.28), boxH = Math.round(h * 0.08);
+        bestBox = { x: 16, y: h - boxH - 16, w: boxW, h: boxH, region: '左下角' };
+      } else {
+        const boxW = Math.round(w * 0.28), boxH = Math.round(h * 0.08);
+        bestBox = { x: w - boxW - 16, y: h - boxH - 16, w: boxW, h: boxH, region: '右下角' };
+      }
+    }
+
+    // 绘制选区 Mask (带 10px 边距安全填充)
+    const pad = 10;
+    const finalX = Math.max(0, bestBox.x - pad);
+    const finalY = Math.max(0, bestBox.y - pad);
+    const finalW = Math.min(w - finalX, bestBox.w + pad * 2);
+    const finalH = Math.min(h - finalY, bestBox.h + pad * 2);
+
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(finalX, finalY, finalW, finalH);
+    render();
+    saveSnapshot(`定位「${q}」`);
+
+    setAppStatus('active', `✓ 已锁定${bestBox.region || ''}「${q}」位置`);
+    showToast(`✓ 已锁定「${q}」(${bestBox.region || '文字区'})，可点击去除`, 'success');
+
+    if (autoRemove) {
+      setTimeout(() => executeWatermarkRemoval(), 120);
+    }
+  }
+
+  // ---- 深度 OCR 识别 (Tesseract.js OCR) ----
+  async function runOcrRecognition() {
+    if (!currentImage) return showToast('请先导入图片', 'error');
+    const q = $('inputTextWatermark').value.trim();
+    if (!q) return showToast('请输入水印文字', 'error');
+
+    if (!window.Tesseract) {
+      showToast('OCR 模块加载中，请稍候重试...', 'error');
+      return;
+    }
+
+    setAppStatus('working', `正在通过 OCR 深度识别「${q}」...`);
+    showToast('正在通过端侧 OCR 扫描全图字符...', 'success');
+
+    try {
+      const worker = await Tesseract.createWorker('chi_sim+eng');
+      const ret = await worker.recognize(baseCanvas);
+      await worker.terminate();
+
+      let matchedBox = null;
+      if (ret.data && ret.data.words) {
+        for (let word of ret.data.words) {
+          if (word.text.includes(q) || q.includes(word.text)) {
+            matchedBox = word.bbox;
+            break;
+          }
+        }
+        if (!matchedBox && ret.data.lines) {
+          for (let line of ret.data.lines) {
+            if (line.text.includes(q)) {
+              matchedBox = line.bbox;
+              break;
+            }
+          }
+        }
+      }
+
+      if (matchedBox) {
+        const pad = 10;
+        const w = currentImage.width, h = currentImage.height;
+        const finalX = Math.max(0, matchedBox.x0 - pad);
+        const finalY = Math.max(0, matchedBox.y0 - pad);
+        const finalW = Math.min(w - finalX, (matchedBox.x1 - matchedBox.x0) + pad * 2);
+        const finalH = Math.min(h - finalY, (matchedBox.y1 - matchedBox.y0) + pad * 2);
+
+        maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+        maskCtx.fillRect(finalX, finalY, finalW, finalH);
+        render();
+        saveSnapshot(`OCR 定位: ${q}`);
+        setAppStatus('active', `✓ OCR 精准锁定「${q}」坐标`);
+        showToast(`✓ OCR 精准定位到「${q}」！`, 'success');
+      } else {
+        // OCR 未匹配到精确字符串时，回退到边缘自适应扫描
+        locateTextByGradient(false);
+        showToast(`OCR 未扫到文本，已启用边缘自适应定位`, 'success');
+      }
+    } catch (err) {
+      console.warn('OCR error, fallback to gradient locator', err);
+      locateTextByGradient(false);
+    }
+  }
+
+  $('btnLocateText').onclick = () => locateTextByGradient(false);
+  $('btnOcrText').onclick = () => runOcrRecognition();
+  $('btnAutoRemoveText').onclick = () => locateTextByGradient(true);
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => {
+      $('inputTextWatermark').value = chip.dataset.txt;
+      if (currentImage) locateTextByGradient(false);
+    };
+  });
+
+  // ---- 常规交互与画笔系统 ----
+  function getCanvasPos(e) {
+    const sRect = stage.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max((e.clientX - sRect.left) / zoom, 0), currentImage.width),
+      y: Math.min(Math.max((e.clientY - sRect.top) / zoom, 0), currentImage.height),
+      rawX: e.clientX, rawY: e.clientY
+    };
+  }
+
+  function drawBrush(p1, p2, isEraser = false) {
+    maskCtx.save();
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.lineWidth = brushSize;
+    if (isEraser) {
+      maskCtx.globalCompositeOperation = 'destination-out';
+      maskCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      maskCtx.globalCompositeOperation = 'source-over';
+      maskCtx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
+    }
+    maskCtx.beginPath();
+    if (p1) { maskCtx.moveTo(p1.x, p1.y); maskCtx.lineTo(p2.x, p2.y); }
+    else { maskCtx.arc(p2.x, p2.y, brushSize / 2, 0, Math.PI * 2); }
+    maskCtx.stroke();
+    maskCtx.restore();
+    render();
+  }
+
+  function applyColorWand(originX, originY) {
+    const w = currentImage.width, h = currentImage.height;
+    const d = baseCtx.getImageData(0, 0, w, h).data;
+    const startIdx = (Math.floor(originY) * w + Math.floor(originX)) * 4;
+    const targetR = d[startIdx], targetG = d[startIdx + 1], targetB = d[startIdx + 2];
+    const maskImgData = maskCtx.getImageData(0, 0, w, h);
+    const md = maskImgData.data;
+    const tol = wandTolerance * wandTolerance * 3;
+
+    const minX = Math.max(0, Math.floor(originX - 300)), maxX = Math.min(w - 1, Math.floor(originX + 300));
+    const minY = Math.max(0, Math.floor(originY - 300)), maxY = Math.min(h - 1, Math.floor(originY + 300));
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const i = (y * w + x) * 4;
+        const dr = d[i] - targetR, dg = d[i + 1] - targetG, db = d[i + 2] - targetB;
+        if (dr * dr + dg * dg + db * db <= tol) {
+          md[i] = 244; md[i + 1] = 63; md[i + 2] = 94; md[i + 3] = 165;
+        }
+      }
+    }
+    maskCtx.putImageData(maskImgData, 0, 0);
+    render();
+    saveSnapshot('魔棒选区');
+    showToast('已自动吸附相近颜色字迹', 'success');
+  }
+
+  viewport.addEventListener('mousedown', e => {
+    if (!currentImage) return;
+    if (e.button === 1 || isSpacePressed || activeTool === 'pan') {
+      isPanning = true; panStartX = e.clientX - panX; panStartY = e.clientY - panY;
+      viewport.classList.add('is-panning'); return;
+    }
+    if (e.button !== 0) return;
+    const pos = getCanvasPos(e);
+    isDrawing = true;
+    if (activeTool === 'brush') { drawBrush(null, pos, false); lastPos = pos; }
+    else if (activeTool === 'eraser') { drawBrush(null, pos, true); lastPos = pos; }
+    else if (activeTool === 'rect') { rectStart = pos; marqueeBox.style.display = 'block'; updateMarquee(rectStart, pos); }
+    else if (activeTool === 'wand') { applyColorWand(pos.x, pos.y); isDrawing = false; }
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (isPanning) {
+      panX = e.clientX - panStartX; panY = e.clientY - panStartY;
+      updateViewportTransform(); return;
+    }
+    if (!currentImage) return;
+    const pos = getCanvasPos(e);
+    if (['brush', 'eraser'].includes(activeTool)) {
+      brushCursor.style.display = 'block';
+      brushCursor.style.left = e.clientX + 'px'; brushCursor.style.top = e.clientY + 'px';
+      brushCursor.style.width = (brushSize * zoom) + 'px'; brushCursor.style.height = (brushSize * zoom) + 'px';
+    } else {
+      brushCursor.style.display = 'none';
+    }
+    if (isComparing) updateCompareSplit(pos.x);
+    if (!isDrawing) return;
+    if (activeTool === 'brush') { drawBrush(lastPos, pos, false); lastPos = pos; }
+    else if (activeTool === 'eraser') { drawBrush(lastPos, pos, true); lastPos = pos; }
+    else if (activeTool === 'rect' && rectStart) { updateMarquee(rectStart, pos); }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isPanning) { isPanning = false; viewport.classList.remove('is-panning'); }
+    if (isDrawing) {
+      isDrawing = false; lastPos = null;
+      if (activeTool === 'rect' && rectStart) commitRectMarquee();
+      else if (['brush', 'eraser'].includes(activeTool)) saveSnapshot('涂抹选区');
+    }
+  });
+
+  function updateMarquee(p1, p2) {
+    const minX = Math.min(p1.x, p2.x), maxX = Math.max(p1.x, p2.x);
+    const minY = Math.min(p1.y, p2.y), maxY = Math.max(p1.y, p2.y);
+    marqueeBox.style.left = minX + 'px'; marqueeBox.style.top = minY + 'px';
+    marqueeBox.style.width = (maxX - minX) + 'px'; marqueeBox.style.height = (maxY - minY) + 'px';
+  }
+
+  function commitRectMarquee() {
+    marqueeBox.style.display = 'none';
+    const minX = parseFloat(marqueeBox.style.left), minY = parseFloat(marqueeBox.style.top);
+    const w = parseFloat(marqueeBox.style.width), h = parseFloat(marqueeBox.style.height);
+    if (w > 3 && h > 3) {
+      maskCtx.fillStyle = 'rgba(244, 63, 94, 0.65)';
+      maskCtx.fillRect(minX, minY, w, h);
+      render(); saveSnapshot('矩形框选');
+    }
+    rectStart = null;
+  }
+
+  function render() {
+    if (!currentImage) return;
+    const w = viewCanvas.width, h = viewCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    if (isComparing) {
+      const splitX = Math.round(w * compareSplit);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, splitX, h); ctx.clip();
+      ctx.drawImage(originalCanvas, 0, 0); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(splitX, 0, w - splitX, h); ctx.clip();
+      ctx.drawImage(baseCanvas, 0, 0); ctx.restore();
+      compareLine.style.display = 'block'; compareLine.style.left = splitX + 'px';
+    } else {
+      compareLine.style.display = 'none';
+      ctx.drawImage(baseCanvas, 0, 0);
+      ctx.drawImage(maskCanvas, 0, 0);
+    }
+  }
+
+  function updateCompareSplit(canvasX) {
+    if (!currentImage) return;
+    compareSplit = Math.min(Math.max(canvasX / currentImage.width, 0.02), 0.98);
+    render();
+  }
+
+  function toggleCompare(forceState) {
+    if (!currentImage) return;
+    isComparing = typeof forceState === 'boolean' ? forceState : !isComparing;
+    $('btnCompareToggle').classList.toggle('active', isComparing);
+    render();
+  }
+  $('btnCompareToggle').onclick = () => toggleCompare();
+
+  function executeWatermarkRemoval() {
+    if (!currentImage) return showToast('请先导入图片', 'error');
+    const w = currentImage.width, h = currentImage.height;
+    const maskData = maskCtx.getImageData(0, 0, w, h).data;
+
+    let minX = w, minY = h, maxX = -1, maxY = -1, count = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (maskData[(y * w + x) * 4 + 3] > 10) {
+          count++;
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (count === 0) return showToast('请先用画笔、矩形或文字定位圈选需要消除的水印区域', 'error');
+
+    const pad = activeEngine === 'telea' ? 24 : 16;
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+
+    const roiW = maxX - minX + 1, roiH = maxY - minY + 1;
+    const roiData = baseCtx.getImageData(minX, minY, roiW, roiH);
+    const roiMask = maskCtx.getImageData(minX, minY, roiW, roiH).data;
+
+    setAppStatus('working', `正在调用 ${activeEngine.toUpperCase()} 引擎计算...`);
+    progressWrap.style.display = 'block'; progressInner.style.width = '5%';
+    $('btnExecute').disabled = true;
+
+    worker.postMessage({
+      type: 'process',
+      roiData: roiData,
+      roiMask: roiMask,
+      roiW: roiW, roiH: roiH,
+      engine: activeEngine,
+      iters: 90
+    });
+
+    window._lastROI = { minX, minY, roiW, roiH };
+  }
+
+  function finishProcessing(roiData, duration) {
+    const { minX, minY } = window._lastROI;
+    baseCtx.putImageData(roiData, minX, minY);
+    maskCtx.clearRect(0, 0, currentImage.width, currentImage.height);
+    render();
+    saveSnapshot('去除水印');
+
+    progressWrap.style.display = 'none';
+    $('btnExecute').disabled = false;
+    infoCalcTime.textContent = `⚡ 耗时 ${duration}ms`;
+    setAppStatus('active', `✓ 去除完成 (耗时 ${duration}ms)`);
+    showToast(`✓ 水印已成功修复 (耗时 ${duration}ms)`, 'success');
+  }
+  $('btnExecute').onclick = executeWatermarkRemoval;
+
+  // 预设
+  $('presetGemini').onclick = () => {
+    if (!currentImage) return;
+    const w = currentImage.width, h = currentImage.height;
+    const size = (w > 1024) ? 104 : 54, margin = (w > 1024) ? 60 : 30;
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - margin - size, h - margin - size, size, size);
+    render(); saveSnapshot('Gemini 星标预设');
+  };
+  $('presetAIText').onclick = () => {
+    if (!currentImage) return;
+    const w = currentImage.width, h = currentImage.height;
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - Math.round(w * 0.28) - 16, h - Math.round(h * 0.12) - 16, Math.round(w * 0.28), Math.round(h * 0.12));
+    render(); saveSnapshot('AI生成字样预设');
+  };
+  $('presetBottomLeft').onclick = () => {
+    if (!currentImage) return;
+    const w = currentImage.width, h = currentImage.height, s = Math.round(Math.min(w, h) * 0.28);
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(16, h - s - 16, s, s);
+    render(); saveSnapshot('左下角区域');
+  };
+  $('presetBottomRight').onclick = () => {
+    if (!currentImage) return;
+    const w = currentImage.width, h = currentImage.height, s = Math.round(Math.min(w, h) * 0.28);
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - s - 16, h - s - 16, s, s);
+    render(); saveSnapshot('右下角区域');
+  };
+
+  function saveSnapshot(name = '') {
+    if (!currentImage) return;
+    undoStack.push({
+      baseData: baseCtx.getImageData(0, 0, currentImage.width, currentImage.height),
+      maskData: maskCtx.getImageData(0, 0, currentImage.width, currentImage.height)
+    });
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack.length = 0; updateHistoryButtons();
+  }
+
+  function undo() {
+    if (undoStack.length <= 1) return;
+    redoStack.push(undoStack.pop());
+    const prev = undoStack[undoStack.length - 1];
+    baseCtx.putImageData(prev.baseData, 0, 0);
+    maskCtx.putImageData(prev.maskData, 0, 0);
+    render(); updateHistoryButtons();
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    const next = redoStack.pop();
+    undoStack.push(next);
+    baseCtx.putImageData(next.baseData, 0, 0);
+    maskCtx.putImageData(next.maskData, 0, 0);
+    render(); updateHistoryButtons();
+  }
+
+  function updateHistoryButtons() {
+    $('btnUndo').disabled = undoStack.length <= 1;
+    $('btnRedo').disabled = redoStack.length === 0;
+  }
+  $('btnUndo').onclick = undo; $('btnRedo').onclick = redo;
+
+  function clearMask() {
+    if (!currentImage) return;
+    maskCtx.clearRect(0, 0, currentImage.width, currentImage.height);
+    render(); saveSnapshot('清空选区');
+  }
+  $('btnClearMask').onclick = clearMask;
+
+  $('btnResetImage').onclick = () => {
+    if (!currentImage) return;
+    baseCtx.drawImage(originalCanvas, 0, 0);
+    maskCtx.clearRect(0, 0, currentImage.width, currentImage.height);
+    render(); saveSnapshot('重置原图');
+  };
+
+  function downloadResult() {
+    if (!currentImage) return;
+    const format = $('exportFormat').value;
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : (format === 'webp' ? 'image/webp' : 'image/png');
+    const ext = format === 'jpeg' ? 'jpg' : format;
+    const a = document.createElement('a');
+    a.href = baseCanvas.toDataURL(mimeType, 0.95);
+    a.download = `watermark_removed_${Date.now()}.${ext}`;
+    a.click();
+    showToast(`✓ 已导出 ${ext.toUpperCase()} 图像`, 'success');
+  }
+  $('btnDownload').onclick = downloadResult;
+
+  function selectTool(toolName) {
+    activeTool = toolName;
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === toolName));
+  }
+  document.querySelectorAll('.tool-btn').forEach(btn => btn.onclick = () => selectTool(btn.dataset.tool));
+
+  document.querySelectorAll('.algo-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.algo-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      activeEngine = card.dataset.engine;
+    };
+  });
+
+  function adjustBrushSize(delta) {
+    brushSize = Math.min(Math.max(brushSize + delta, 4), 200);
+    $('inputBrushSize').value = brushSize;
+    $('valBrushSize').textContent = brushSize + ' px';
+  }
+  $('inputBrushSize').oninput = e => {
+    brushSize = parseInt(e.target.value);
+    $('valBrushSize').textContent = brushSize + ' px';
+  };
+
+  $('btnZoomIn').onclick = () => { zoom = Math.min(zoom * 1.25, 15); updateViewportTransform(); };
+  $('btnZoomOut').onclick = () => { zoom = Math.max(zoom * 0.8, 0.05); updateViewportTransform(); };
+  $('btnZoomFit').onclick = () => resetViewport(true);
+  $('btnZoom100').onclick = () => resetViewport(false);
+
+  function setAppStatus(dotClass, text) {
+    statusDot.className = 'status-dot ' + dotClass;
+    statusText.textContent = text;
+  }
+
+  let toastTimer = null;
+  function showToast(msg, type = '') {
+    toastMsg.textContent = msg;
+    toastBox.className = 'toast show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastBox.className = 'toast ' + type; }, 2400);
+  }
+})();
+</script>
+</body>
+</html>

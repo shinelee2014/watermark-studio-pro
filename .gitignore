@@ -1,0 +1,21 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Nn]onprofit/
+
+# Editor & IDE Directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary and Log files
+*.log
+*.tmp
+__pycache__/
+*.pyc
+
+# Local Scratch Dirs
+scratch/
+test_*/
