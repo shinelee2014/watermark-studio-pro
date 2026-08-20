@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" async></script>
 <style>
   :root {
     --bg-base: #0a0c10;
@@ -25,7 +26,7 @@
     --accent: #10b981;
     --accent-glow: rgba(16, 185, 129, 0.25);
     --danger: #f43f5e;
-    --mask-color: rgba(244, 63, 94, 0.55);
+    --mask-color: rgba(244, 63, 94, 0.65);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
@@ -98,7 +99,7 @@
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
   .top-btn {
     display: inline-flex;
@@ -132,6 +133,11 @@
     box-shadow: 0 2px 10px var(--accent-glow);
   }
   .top-btn.batch-run:hover:not(:disabled) { background: linear-gradient(135deg, #059669, #047857); }
+  .top-btn.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #34d399;
+  }
 
   /* 主体三栏布局 */
   .workspace {
@@ -143,7 +149,7 @@
 
   /* 左侧：批量队列侧边栏 */
   .queue-sidebar {
-    width: 220px;
+    width: 210px;
     background: var(--bg-surface);
     border-right: 1px solid var(--line);
     display: flex;
@@ -183,7 +189,7 @@
   .queue-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 6px 8px;
     background: var(--bg-elevated);
     border: 1px solid var(--line);
@@ -198,8 +204,8 @@
     background: rgba(59, 130, 246, 0.15);
   }
   .queue-thumb {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 4px;
     object-fit: cover;
     background: #000;
@@ -227,13 +233,14 @@
   .queue-item-del {
     color: var(--text-dim);
     cursor: pointer;
-    padding: 2px;
+    padding: 2px 4px;
+    font-size: 12px;
   }
   .queue-item-del:hover { color: var(--danger); }
 
   /* 工具小栏 */
   .toolbar-mini {
-    width: 50px;
+    width: 54px;
     background: var(--bg-surface);
     border-right: 1px solid var(--line);
     display: flex;
@@ -244,8 +251,8 @@
     z-index: 20;
   }
   .tool-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--radius-sm);
     background: transparent;
     border: 1px solid transparent;
@@ -256,13 +263,26 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s ease;
+    position: relative;
   }
-  .tool-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .tool-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .tool-btn .hotkey {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
   .tool-btn:hover { background: var(--bg-elevated); color: var(--text-main); }
   .tool-btn.active {
     background: var(--brand-glow);
     border-color: rgba(59, 130, 246, 0.4);
     color: var(--brand-hover);
+  }
+  .tool-divider {
+    width: 24px;
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0;
   }
 
   /* 中间主视口 */
@@ -305,6 +325,7 @@
     transform: translate(-50%, -50%);
     display: none;
     z-index: 30;
+    box-shadow: 0 0 4px rgba(0,0,0,0.6);
   }
   #marqueeBox {
     position: absolute;
@@ -323,6 +344,33 @@
     pointer-events: none;
     display: none;
     z-index: 32;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  }
+  .compare-slider-line .split-label-left {
+    position: absolute;
+    top: 14px; right: 10px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(56,189,248,0.3);
+    white-space: nowrap;
+  }
+  .compare-slider-line .split-label-right {
+    position: absolute;
+    top: 14px; left: 10px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(52,211,153,0.3);
+    white-space: nowrap;
   }
 
   .drop-overlay {
@@ -454,8 +502,30 @@
     cursor: pointer;
   }
   .chip:hover { color: var(--brand-hover); border-color: var(--brand); }
+
+  .pos-hint-row {
+    display: flex;
+    gap: 4px;
+  }
+  .pos-btn {
+    flex: 1;
+    font-size: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 3px 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .pos-btn:hover, .pos-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--brand);
+    color: var(--brand-hover);
+  }
+
   .text-action-row { display: flex; gap: 6px; }
-  .btn-text-locate, .btn-text-auto {
+  .btn-text-locate, .btn-text-ocr {
     flex: 1;
     font-size: 11px;
     font-weight: 600;
@@ -466,7 +536,19 @@
     border: 1px solid var(--line);
   }
   .btn-text-locate { background: var(--bg-hover); color: var(--text-main); }
-  .btn-text-auto { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; }
+  .btn-text-ocr { background: rgba(139, 92, 246, 0.18); border-color: rgba(139, 92, 246, 0.4); color: #c084fc; }
+  .btn-text-auto {
+    width: 100%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: center;
+  }
 
   .control-group { margin-bottom: 10px; }
   .control-label {
@@ -509,6 +591,20 @@
   .algo-title { font-size: 12px; font-weight: 600; color: var(--text-main); display: flex; justify-content: space-between; }
   .algo-desc { font-size: 10px; color: var(--text-dim); }
 
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .preset-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 6px 6px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .preset-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+
+  .action-stack { display: flex; flex-direction: column; gap: 8px; }
   .btn-run {
     width: 100%;
     padding: 10px;
@@ -524,18 +620,20 @@
   .btn-run:hover:not(:disabled) { background: linear-gradient(135deg, #1d4ed8, #2563eb); }
   .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .preset-btn {
+  .btn-secondary-row { display: flex; gap: 6px; }
+  .btn-sub {
+    flex: 1;
+    padding: 7px;
     background: var(--bg-elevated);
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     font-size: 11px;
-    padding: 6px 6px;
     cursor: pointer;
     text-align: center;
   }
-  .preset-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+  .btn-sub:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-main); }
+  .btn-sub:disabled { opacity: 0.35; cursor: not-allowed; }
 
   footer {
     height: 26px;
@@ -552,7 +650,17 @@
   .status-left, .status-right { display: flex; align-items: center; gap: 12px; }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; }
   .status-dot.active { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.6); }
-  .status-dot.working { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.6); }
+  .status-dot.working { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.6); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .progress-wrap {
+    width: 100px; height: 4px;
+    background: var(--bg-active);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-inner { height: 100%; width: 0%; background: var(--brand); }
 
   .toast {
     position: fixed;
@@ -594,11 +702,23 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       批量导入多图
     </button>
+    <button class="top-btn" id="btnUndo" disabled title="撤销 (Ctrl+Z)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      撤销
+    </button>
+    <button class="top-btn" id="btnRedo" disabled title="重做 (Ctrl+Y)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+      重做
+    </button>
+    <button class="top-btn" id="btnCompareToggle" disabled title="对比原图 (按住 \ 键)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      对比
+    </button>
     <button class="top-btn batch-run" id="btnBatchProcessAll" disabled>
-      ⚡ 批量处理全部图片
+      ⚡ 批量处理全部队列
     </button>
     <button class="top-btn" id="btnBatchExportAll" disabled>
-      📦 批量导出全部
+      📦 批量打包下载
     </button>
     <button class="top-btn primary" id="btnDownloadSingle" disabled>
       导出当前图片
@@ -614,7 +734,6 @@
       <span class="queue-count" id="queueCount">0 张</span>
     </div>
     <div class="queue-list" id="queueList">
-      <!-- 动态插入图片条目 -->
       <div style="padding:20px 10px; text-align:center; font-size:11px; color:var(--text-dim);">
         暂无图片<br>可拖入多张图片批量处理
       </div>
@@ -623,10 +742,27 @@
 
   <!-- 工具栏 -->
   <aside class="toolbar-mini">
-    <button class="tool-btn active" id="toolBrush" data-tool="brush" title="涂抹画笔 (B)"><svg viewBox="0 0 24 24"><path d="M18.375 2.625a3.875 3.875 0 0 0-5.48 0L3.5 12v4.5h4.5l9.395-9.395a3.875 3.875 0 0 0 0-5.48z"/></svg></button>
-    <button class="tool-btn" id="toolEraser" data-tool="eraser" title="橡皮擦 (E)"><svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/></svg></button>
-    <button class="tool-btn" id="toolRect" data-tool="rect" title="矩形框选 (R)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/></svg></button>
-    <button class="tool-btn" id="toolPan" data-tool="pan" title="平移抓手 (H / 空格)"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+    <button class="tool-btn active" id="toolBrush" data-tool="brush" title="涂抹画笔 (B)">
+      <svg viewBox="0 0 24 24"><path d="M18.375 2.625a3.875 3.875 0 0 0-5.48 0L3.5 12v4.5h4.5l9.395-9.395a3.875 3.875 0 0 0 0-5.48z"/></svg>
+      <span class="hotkey">B</span>
+    </button>
+    <button class="tool-btn" id="toolEraser" data-tool="eraser" title="橡皮擦 (E)">
+      <svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+      <span class="hotkey">E</span>
+    </button>
+    <button class="tool-btn" id="toolRect" data-tool="rect" title="矩形框选 (R)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/></svg>
+      <span class="hotkey">R</span>
+    </button>
+    <button class="tool-btn" id="toolWand" data-tool="wand" title="色彩吸附魔棒 (W)">
+      <svg viewBox="0 0 24 24"><path d="m15 4-2 2"/><path d="m15 9 6-6"/><path d="m18 13 2 2"/><path d="m2 22 10-10"/></svg>
+      <span class="hotkey">W</span>
+    </button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" id="toolPan" data-tool="pan" title="平移抓手 (H / 空格)">
+      <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+      <span class="hotkey">H</span>
+    </button>
   </aside>
 
   <!-- 中间主视口 -->
@@ -634,7 +770,10 @@
     <div class="canvas-stage" id="stage">
       <canvas id="viewCanvas"></canvas>
       <div id="marqueeBox"></div>
-      <div class="compare-slider-line" id="compareLine"></div>
+      <div class="compare-slider-line" id="compareLine">
+        <span class="split-label-left">原图 (修复前)</span>
+        <span class="split-label-right">已修复</span>
+      </div>
     </div>
     <div id="brushCursor"></div>
 
@@ -669,10 +808,19 @@
           <span class="chip" data-txt="小红书">小红书</span>
           <span class="chip" data-txt="知乎">知乎</span>
         </div>
-        <div class="text-action-row">
-          <button class="btn-text-locate" id="btnLocateText">🔍 当前图定位</button>
-          <button class="btn-text-auto" id="btnAutoRemoveText">⚡ 当前图清除</button>
+
+        <div class="pos-hint-row">
+          <button class="pos-btn active" data-pos="auto">全图扫描</button>
+          <button class="pos-btn" data-pos="bottom-left">📍 偏左下</button>
+          <button class="pos-btn" data-pos="bottom-right">📍 偏右下</button>
+          <button class="pos-btn" data-pos="bottom-center">📍 偏中下</button>
         </div>
+
+        <div class="text-action-row">
+          <button class="btn-text-locate" id="btnLocateText">🔍 边缘定位</button>
+          <button class="btn-text-ocr" id="btnOcrText">🎯 深度 OCR</button>
+        </div>
+        <button class="btn-text-auto" id="btnAutoRemoveText">⚡ 一键定位并清除</button>
       </div>
     </div>
 
@@ -700,7 +848,7 @@
       <div class="section-title">修复算法引擎</div>
       <div class="algorithm-cards">
         <div class="algo-card active" data-engine="telea">
-          <div class="algo-title"><span>Telea 快速行进法 (FMM)</span></div>
+          <div class="algo-title"><span>Telea 快速行进法 (FMM)</span><span style="font-size:9px; background:rgba(16,185,129,0.2); color:#34d399; padding:1px 5px; border-radius:3px;">高保真</span></div>
           <div class="algo-desc">沿明暗梯度向内插值，保全背景细节，消除模糊。</div>
         </div>
         <div class="algo-card" data-engine="anisotropic">
@@ -715,7 +863,13 @@
     </div>
 
     <div class="panel-section">
-      <button class="btn-run" id="btnExecute">一键去除当前水印</button>
+      <div class="action-stack">
+        <button class="btn-run" id="btnExecute" disabled>一键去除当前水印</button>
+        <div class="btn-secondary-row">
+          <button class="btn-sub" id="btnClearMask" disabled>清空选区 (Esc)</button>
+          <button class="btn-sub" id="btnResetImage" disabled>还原至原图</button>
+        </div>
+      </div>
     </div>
   </aside>
 </div>
@@ -724,6 +878,9 @@
   <div class="status-left">
     <div class="status-dot active" id="statusDot"></div>
     <span id="statusText">本地高性能引擎已就绪</span>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-inner" id="progressInner"></div>
+    </div>
   </div>
   <div class="status-right">
     <span id="infoDim">- x - px</span>
@@ -882,24 +1039,33 @@ self.onmessage = function(e) {
   const viewport = $('viewport'), stage = $('stage'), viewCanvas = $('viewCanvas');
   const ctx = viewCanvas.getContext('2d');
   const dropOverlay = $('dropOverlay'), hiddenBatchInput = $('hiddenBatchInput');
-  const brushCursor = $('brushCursor'), marqueeBox = $('marqueeBox');
+  const brushCursor = $('brushCursor'), marqueeBox = $('marqueeBox'), compareLine = $('compareLine');
   const queueList = $('queueList'), queueCount = $('queueCount');
   const toastBox = $('toastBox'), toastMsg = $('toastMsg');
   const infoDim = $('infoDim'), infoCalcTime = $('infoCalcTime');
   const zoomLevel = $('zoomLevel');
+  const statusDot = $('statusDot'), statusText = $('statusText');
+  const progressWrap = $('progressWrap'), progressInner = $('progressInner');
 
   let imageQueue = [];
   let currentIndex = -1;
 
   let baseCanvas = document.createElement('canvas'), baseCtx = baseCanvas.getContext('2d');
   let maskCanvas = document.createElement('canvas'), maskCtx = maskCanvas.getContext('2d');
+  let originalCanvas = document.createElement('canvas'), originalCtx = originalCanvas.getContext('2d');
 
   let activeTool = 'brush';
   let activeEngine = 'telea';
   let brushSize = 30;
+  let wandTolerance = 32;
+  let isComparing = false, compareSplit = 0.5;
+  let selectedPosHint = 'auto';
+
   let zoom = 1.0, panX = 0, panY = 0;
   let isPanning = false, panStartX = 0, panStartY = 0, isSpacePressed = false;
   let isDrawing = false, lastPos = null, rectStart = null;
+
+  const undoStack = [], redoStack = [], MAX_HISTORY = 16;
 
   const workerBlob = new Blob([$('workerScript').textContent], { type: 'application/javascript' });
   const worker = new Worker(URL.createObjectURL(workerBlob));
@@ -911,6 +1077,8 @@ self.onmessage = function(e) {
       baseCtx.putImageData(roiData, minX, minY);
       maskCtx.clearRect(0, 0, baseCanvas.width, baseCanvas.height);
       render();
+      saveSnapshot('去除水印');
+
       if (currentIndex >= 0 && imageQueue[currentIndex]) {
         imageQueue[currentIndex].cleanedCanvas = document.createElement('canvas');
         imageQueue[currentIndex].cleanedCanvas.width = baseCanvas.width;
@@ -919,9 +1087,12 @@ self.onmessage = function(e) {
         imageQueue[currentIndex].status = 'done';
         updateQueueUI();
       }
+
+      progressWrap.style.display = 'none';
+      $('btnExecute').disabled = false;
       infoCalcTime.textContent = `⚡ 耗时 ${duration}ms`;
       showToast(`✓ 去除完成 (耗时 ${duration}ms)`, 'success');
-      $('btnExecute').disabled = false;
+      setAppStatus('active', `✓ 去除完成 (耗时 ${duration}ms)`);
     }
   };
 
@@ -930,13 +1101,17 @@ self.onmessage = function(e) {
     zoomLevel.textContent = Math.round(zoom * 100) + '%';
   }
 
-  function resetViewport() {
+  function resetViewport(fit = true) {
     if (currentIndex < 0) return;
     const vRect = viewport.getBoundingClientRect();
-    const pad = 40;
-    const scaleX = (vRect.width - pad * 2) / baseCanvas.width;
-    const scaleY = (vRect.height - pad * 2) / baseCanvas.height;
-    zoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.05), 3.0);
+    if (fit) {
+      const pad = 40;
+      const scaleX = (vRect.width - pad * 2) / baseCanvas.width;
+      const scaleY = (vRect.height - pad * 2) / baseCanvas.height;
+      zoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.05), 3.0);
+    } else {
+      zoom = 1.0;
+    }
     panX = (vRect.width - baseCanvas.width * zoom) / 2;
     panY = (vRect.height - baseCanvas.height * zoom) / 2;
     updateViewportTransform();
@@ -944,10 +1119,273 @@ self.onmessage = function(e) {
 
   function render() {
     if (currentIndex < 0) return;
-    ctx.clearRect(0, 0, viewCanvas.width, viewCanvas.height);
-    ctx.drawImage(baseCanvas, 0, 0);
-    ctx.drawImage(maskCanvas, 0, 0);
+    const w = viewCanvas.width, h = viewCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    if (isComparing) {
+      const splitX = Math.round(w * compareSplit);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, splitX, h); ctx.clip();
+      ctx.drawImage(originalCanvas, 0, 0); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(splitX, 0, w - splitX, h); ctx.clip();
+      ctx.drawImage(baseCanvas, 0, 0); ctx.restore();
+      compareLine.style.display = 'block'; compareLine.style.left = splitX + 'px';
+    } else {
+      compareLine.style.display = 'none';
+      ctx.drawImage(baseCanvas, 0, 0);
+      ctx.drawImage(maskCanvas, 0, 0);
+    }
   }
+
+  function updateCompareSplit(canvasX) {
+    if (currentIndex < 0) return;
+    compareSplit = Math.min(Math.max(canvasX / baseCanvas.width, 0.02), 0.98);
+    render();
+  }
+
+  function toggleCompare(forceState) {
+    if (currentIndex < 0) return;
+    isComparing = typeof forceState === 'boolean' ? forceState : !isComparing;
+    $('btnCompareToggle').classList.toggle('active', isComparing);
+    render();
+  }
+  $('btnCompareToggle').onclick = () => toggleCompare();
+
+  function selectTool(toolName) {
+    activeTool = toolName;
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === toolName));
+  }
+  document.querySelectorAll('.tool-btn').forEach(btn => btn.onclick = () => selectTool(btn.dataset.tool));
+
+  document.querySelectorAll('.algo-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.algo-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      activeEngine = card.dataset.engine;
+    };
+  });
+
+  function adjustBrushSize(delta) {
+    brushSize = Math.min(Math.max(brushSize + delta, 4), 200);
+    $('inputBrushSize').value = brushSize;
+    $('valBrushSize').textContent = brushSize + ' px';
+  }
+  $('inputBrushSize').oninput = e => {
+    brushSize = parseInt(e.target.value);
+    $('valBrushSize').textContent = brushSize + ' px';
+  };
+
+  $('btnZoomIn').onclick = () => { zoom = Math.min(zoom * 1.25, 15); updateViewportTransform(); };
+  $('btnZoomOut').onclick = () => { zoom = Math.max(zoom * 0.8, 0.05); updateViewportTransform(); };
+  $('btnZoomFit').onclick = () => resetViewport(true);
+
+  viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (currentIndex < 0) return;
+    const vRect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - vRect.left, mouseY = e.clientY - vRect.top;
+    const oldZoom = zoom;
+    const delta = e.deltaY < 0 ? 1.15 : 0.87;
+    zoom = Math.min(Math.max(zoom * delta, 0.05), 15.0);
+    panX = mouseX - (mouseX - panX) * (zoom / oldZoom);
+    panY = mouseY - (mouseY - panY) * (zoom / oldZoom);
+    updateViewportTransform();
+  }, { passive: false });
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !isSpacePressed && !['INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+      isSpacePressed = true; viewport.classList.add('panning');
+    }
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
+      else if (e.key === 's' || e.key === 'S') { e.preventDefault(); $('btnDownloadSingle').click(); }
+      else if (e.key === 'o' || e.key === 'O') { e.preventDefault(); hiddenBatchInput.click(); }
+    } else {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (e.key === 'b' || e.key === 'B') selectTool('brush');
+      else if (e.key === 'e' || e.key === 'E') selectTool('eraser');
+      else if (e.key === 'r' || e.key === 'R') selectTool('rect');
+      else if (e.key === 'w' || e.key === 'W') selectTool('wand');
+      else if (e.key === 'h' || e.key === 'H') selectTool('pan');
+      else if (e.key === '[') adjustBrushSize(-4);
+      else if (e.key === ']') adjustBrushSize(4);
+      else if (e.key === 'Escape') clearMask();
+      else if (e.key === '\\') toggleCompare(true);
+    }
+  });
+
+  window.addEventListener('keyup', e => {
+    if (e.code === 'Space') { isSpacePressed = false; viewport.classList.remove('panning', 'is-panning'); }
+    if (e.key === '\\') toggleCompare(false);
+  });
+
+  function getCanvasPos(e) {
+    const sRect = stage.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max((e.clientX - sRect.left) / zoom, 0), baseCanvas.width),
+      y: Math.min(Math.max((e.clientY - sRect.top) / zoom, 0), baseCanvas.height),
+      rawX: e.clientX, rawY: e.clientY
+    };
+  }
+
+  function drawBrush(p1, p2, isEraser = false) {
+    maskCtx.save();
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.lineWidth = brushSize;
+    if (isEraser) {
+      maskCtx.globalCompositeOperation = 'destination-out';
+      maskCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      maskCtx.globalCompositeOperation = 'source-over';
+      maskCtx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
+    }
+    maskCtx.beginPath();
+    if (p1) { maskCtx.moveTo(p1.x, p1.y); maskCtx.lineTo(p2.x, p2.y); }
+    else { maskCtx.arc(p2.x, p2.y, brushSize / 2, 0, Math.PI * 2); }
+    maskCtx.stroke();
+    maskCtx.restore();
+    render();
+  }
+
+  function applyColorWand(originX, originY) {
+    if (currentIndex < 0) return;
+    const w = baseCanvas.width, h = baseCanvas.height;
+    const d = baseCtx.getImageData(0, 0, w, h).data;
+    const startIdx = (Math.floor(originY) * w + Math.floor(originX)) * 4;
+    const targetR = d[startIdx], targetG = d[startIdx + 1], targetB = d[startIdx + 2];
+    const maskImgData = maskCtx.getImageData(0, 0, w, h);
+    const md = maskImgData.data;
+    const tol = wandTolerance * wandTolerance * 3;
+
+    const minX = Math.max(0, Math.floor(originX - 300)), maxX = Math.min(w - 1, Math.floor(originX + 300));
+    const minY = Math.max(0, Math.floor(originY - 300)), maxY = Math.min(h - 1, Math.floor(originY + 300));
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const i = (y * w + x) * 4;
+        const dr = d[i] - targetR, dg = d[i + 1] - targetG, db = d[i + 2] - targetB;
+        if (dr * dr + dg * dg + db * db <= tol) {
+          md[i] = 244; md[i + 1] = 63; md[i + 2] = 94; md[i + 3] = 165;
+        }
+      }
+    }
+    maskCtx.putImageData(maskImgData, 0, 0);
+    render();
+    saveSnapshot('魔棒选区');
+    showToast('已自动吸附相近颜色字迹', 'success');
+  }
+
+  viewport.addEventListener('mousedown', e => {
+    if (currentIndex < 0) return;
+    if (e.button === 1 || isSpacePressed || activeTool === 'pan') {
+      isPanning = true; panStartX = e.clientX - panX; panStartY = e.clientY - panY;
+      viewport.classList.add('is-panning'); return;
+    }
+    if (e.button !== 0) return;
+    const pos = getCanvasPos(e);
+    isDrawing = true;
+    if (activeTool === 'brush') { drawBrush(null, pos, false); lastPos = pos; }
+    else if (activeTool === 'eraser') { drawBrush(null, pos, true); lastPos = pos; }
+    else if (activeTool === 'rect') { rectStart = pos; marqueeBox.style.display = 'block'; updateMarquee(rectStart, pos); }
+    else if (activeTool === 'wand') { applyColorWand(pos.x, pos.y); isDrawing = false; }
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (isPanning) {
+      panX = e.clientX - panStartX; panY = e.clientY - panStartY;
+      updateViewportTransform(); return;
+    }
+    if (currentIndex < 0) return;
+    const pos = getCanvasPos(e);
+    if (['brush', 'eraser'].includes(activeTool)) {
+      brushCursor.style.display = 'block';
+      brushCursor.style.left = e.clientX + 'px'; brushCursor.style.top = e.clientY + 'px';
+      brushCursor.style.width = (brushSize * zoom) + 'px'; brushCursor.style.height = (brushSize * zoom) + 'px';
+    } else {
+      brushCursor.style.display = 'none';
+    }
+    if (isComparing) updateCompareSplit(pos.x);
+    if (!isDrawing) return;
+    if (activeTool === 'brush') { drawBrush(lastPos, pos, false); lastPos = pos; }
+    else if (activeTool === 'eraser') { drawBrush(lastPos, pos, true); lastPos = pos; }
+    else if (activeTool === 'rect' && rectStart) { updateMarquee(rectStart, pos); }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isPanning) { isPanning = false; viewport.classList.remove('is-panning'); }
+    if (isDrawing) {
+      isDrawing = false; lastPos = null;
+      if (activeTool === 'rect' && rectStart) commitRectMarquee();
+      else if (['brush', 'eraser'].includes(activeTool)) saveSnapshot('涂抹选区');
+    }
+  });
+
+  function updateMarquee(p1, p2) {
+    const minX = Math.min(p1.x, p2.x), maxX = Math.max(p1.x, p2.x);
+    const minY = Math.min(p1.y, p2.y), maxY = Math.max(p1.y, p2.y);
+    marqueeBox.style.left = minX + 'px'; marqueeBox.style.top = minY + 'px';
+    marqueeBox.style.width = (maxX - minX) + 'px'; marqueeBox.style.height = (maxY - minY) + 'px';
+  }
+
+  function commitRectMarquee() {
+    marqueeBox.style.display = 'none';
+    const minX = parseFloat(marqueeBox.style.left), minY = parseFloat(marqueeBox.style.top);
+    const w = parseFloat(marqueeBox.style.width), h = parseFloat(marqueeBox.style.height);
+    if (w > 3 && h > 3) {
+      maskCtx.fillStyle = 'rgba(244, 63, 94, 0.65)';
+      maskCtx.fillRect(minX, minY, w, h);
+      render(); saveSnapshot('矩形框选');
+    }
+    rectStart = null;
+  }
+
+  function saveSnapshot(name = '') {
+    if (currentIndex < 0) return;
+    undoStack.push({
+      baseData: baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height),
+      maskData: maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height)
+    });
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack.length = 0; updateHistoryButtons();
+  }
+
+  function undo() {
+    if (undoStack.length <= 1) return;
+    redoStack.push(undoStack.pop());
+    const prev = undoStack[undoStack.length - 1];
+    baseCtx.putImageData(prev.baseData, 0, 0);
+    maskCtx.putImageData(prev.maskData, 0, 0);
+    render(); updateHistoryButtons();
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    const next = redoStack.pop();
+    undoStack.push(next);
+    baseCtx.putImageData(next.baseData, 0, 0);
+    maskCtx.putImageData(next.maskData, 0, 0);
+    render(); updateHistoryButtons();
+  }
+
+  function updateHistoryButtons() {
+    $('btnUndo').disabled = undoStack.length <= 1;
+    $('btnRedo').disabled = redoStack.length === 0;
+  }
+  $('btnUndo').onclick = undo; $('btnRedo').onclick = redo;
+
+  function clearMask() {
+    if (currentIndex < 0) return;
+    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    render(); saveSnapshot('清空选区');
+  }
+  $('btnClearMask').onclick = clearMask;
+
+  $('btnResetImage').onclick = () => {
+    if (currentIndex < 0) return;
+    baseCtx.drawImage(originalCanvas, 0, 0);
+    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    render(); saveSnapshot('重置原图');
+  };
 
   function loadQueueIndex(index) {
     if (index < 0 || index >= imageQueue.length) return;
@@ -958,20 +1396,32 @@ self.onmessage = function(e) {
     viewCanvas.width = img.width; viewCanvas.height = img.height;
     baseCanvas.width = img.width; baseCanvas.height = img.height;
     maskCanvas.width = img.width; maskCanvas.height = img.height;
+    originalCanvas.width = item.img.width; originalCanvas.height = item.img.height;
 
     baseCtx.drawImage(img, 0, 0);
+    originalCtx.drawImage(item.img, 0, 0);
     maskCtx.clearRect(0, 0, img.width, img.height);
 
     stage.style.width = img.width + 'px';
     stage.style.height = img.height + 'px';
 
     dropOverlay.style.display = 'none';
-    resetViewport();
+    resetViewport(true);
+    undoStack.length = 0; redoStack.length = 0;
+    saveSnapshot('载入图片');
     render();
 
     $('btnExecute').disabled = false;
+    $('btnClearMask').disabled = false;
+    $('btnResetImage').disabled = false;
+    $('btnCompareToggle').disabled = false;
     $('btnDownloadSingle').disabled = false;
+    $('btnLocateText').disabled = false;
+    $('btnOcrText').disabled = false;
+    $('btnAutoRemoveText').disabled = false;
+
     infoDim.textContent = `${img.width} × ${img.height} px`;
+    setAppStatus('active', `已载入当前图片 · [${index + 1}/${imageQueue.length}]`);
     updateQueueUI();
   }
 
@@ -1014,9 +1464,11 @@ self.onmessage = function(e) {
   function handleFiles(files) {
     if (!files || files.length === 0) return;
     let loaded = 0;
-    const total = files.length;
-    for (let file of files) {
-      if (!file.type.startsWith('image/')) continue;
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const total = validFiles.length;
+    if (total === 0) return showToast('请选择有效的图片文件', 'error');
+
+    for (let file of validFiles) {
       const reader = new FileReader();
       reader.onload = ev => {
         const img = new Image();
@@ -1050,9 +1502,212 @@ self.onmessage = function(e) {
   });
   window.addEventListener('dragover', e => e.preventDefault());
 
-  // 算法消除逻辑
-  function executeRemoval() {
+  // 双引擎文字定位
+  document.querySelectorAll('.pos-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPosHint = btn.dataset.pos;
+      if (currentIndex >= 0) locateTextByGradient(false);
+    };
+  });
+
+  function locateTextByGradient(autoRemove = false) {
+    if (currentIndex < 0) return showToast('请先导入图片', 'error');
+    const q = $('inputTextWatermark').value.trim();
+    if (!q) return showToast('请输入水印文字', 'error');
+
+    const w = baseCanvas.width, h = baseCanvas.height;
+    const srcData = baseCtx.getImageData(0, 0, w, h).data;
+
+    setAppStatus('working', `正在智能定位「${q}」...`);
+
+    const candidateRegions = [];
+    if (selectedPosHint === 'bottom-left' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '左下角', x0: 0, y0: Math.round(h * 0.72), x1: Math.round(w * 0.45), y1: h });
+    }
+    if (selectedPosHint === 'bottom-right' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '右下角', x0: Math.round(w * 0.55), y0: Math.round(h * 0.72), x1: w, y1: h });
+    }
+    if (selectedPosHint === 'bottom-center' || selectedPosHint === 'auto') {
+      candidateRegions.push({ name: '中下部', x0: Math.round(w * 0.25), y0: Math.round(h * 0.75), x1: Math.round(w * 0.75), y1: h });
+    }
+
+    let bestBox = null;
+    let highestEdgeEnergy = -1;
+
+    for (let reg of candidateRegions) {
+      const regW = reg.x1 - reg.x0, regH = reg.y1 - reg.y0;
+      if (regW <= 10 || regH <= 10) continue;
+
+      const edgeMap = new Float32Array(regW * regH);
+      for (let y = 1; y < regH - 1; y++) {
+        for (let x = 1; x < regW - 1; x++) {
+          const img_gx = ((reg.y0 + y) * w + (reg.x0 + x + 1)) * 4;
+          const img_gx_p = ((reg.y0 + y) * w + (reg.x0 + x - 1)) * 4;
+          const img_gy = ((reg.y0 + y + 1) * w + (reg.x0 + x)) * 4;
+          const img_gy_p = ((reg.y0 + y - 1) * w + (reg.x0 + x)) * 4;
+
+          const dx = Math.abs(srcData[img_gx] - srcData[img_gx_p]) + Math.abs(srcData[img_gx + 1] - srcData[img_gx_p + 1]);
+          const dy = Math.abs(srcData[img_gy] - srcData[img_gy_p]) + Math.abs(srcData[img_gy + 1] - srcData[img_gy_p + 1]);
+          edgeMap[y * regW + x] = dx + dy;
+        }
+      }
+
+      const expectedAspect = Math.max(2.0, q.length * 0.85);
+      const estH = Math.max(16, Math.round(Math.min(w, h) * 0.038));
+      const estW = Math.round(estH * expectedAspect);
+
+      for (let y = 0; y <= regH - estH; y += 4) {
+        for (let x = 0; x <= regW - estW; x += 4) {
+          let sum = 0;
+          for (let dy = 0; dy < estH; dy += 2) {
+            for (let dx = 0; dx < estW; dx += 2) {
+              sum += edgeMap[(y + dy) * regW + (x + dx)];
+            }
+          }
+          if (sum > highestEdgeEnergy) {
+            highestEdgeEnergy = sum;
+            bestBox = { x: reg.x0 + x, y: reg.y0 + y, w: estW, h: estH, energy: sum, region: reg.name };
+          }
+        }
+      }
+    }
+
+    if (!bestBox || highestEdgeEnergy < 10) {
+      if (selectedPosHint === 'bottom-left') {
+        const boxW = Math.round(w * 0.28), boxH = Math.round(h * 0.08);
+        bestBox = { x: 16, y: h - boxH - 16, w: boxW, h: boxH, region: '左下角' };
+      } else {
+        const boxW = Math.round(w * 0.28), boxH = Math.round(h * 0.08);
+        bestBox = { x: w - boxW - 16, y: h - boxH - 16, w: boxW, h: boxH, region: '右下角' };
+      }
+    }
+
+    const pad = 10;
+    const finalX = Math.max(0, bestBox.x - pad);
+    const finalY = Math.max(0, bestBox.y - pad);
+    const finalW = Math.min(w - finalX, bestBox.w + pad * 2);
+    const finalH = Math.min(h - finalY, bestBox.h + pad * 2);
+
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(finalX, finalY, finalW, finalH);
+    render();
+    saveSnapshot(`定位「${q}」`);
+
+    setAppStatus('active', `✓ 已锁定${bestBox.region || ''}「${q}」位置`);
+    showToast(`✓ 已锁定「${q}」(${bestBox.region || '文字区'})，可点击去除`, 'success');
+
+    if (autoRemove) {
+      setTimeout(() => executeRemoval(), 120);
+    }
+  }
+
+  async function runOcrRecognition() {
+    if (currentIndex < 0) return showToast('请先导入图片', 'error');
+    const q = $('inputTextWatermark').value.trim();
+    if (!q) return showToast('请输入水印文字', 'error');
+
+    if (!window.Tesseract) {
+      showToast('OCR 模块加载中，请稍候重试...', 'error');
+      return;
+    }
+
+    setAppStatus('working', `正在通过 OCR 深度识别「${q}」...`);
+    showToast('正在通过端侧 OCR 扫描全图字符...', 'success');
+
+    try {
+      const worker = await Tesseract.createWorker('chi_sim+eng');
+      const ret = await worker.recognize(baseCanvas);
+      await worker.terminate();
+
+      let matchedBox = null;
+      if (ret.data && ret.data.words) {
+        for (let word of ret.data.words) {
+          if (word.text.includes(q) || q.includes(word.text)) {
+            matchedBox = word.bbox;
+            break;
+          }
+        }
+        if (!matchedBox && ret.data.lines) {
+          for (let line of ret.data.lines) {
+            if (line.text.includes(q)) {
+              matchedBox = line.bbox;
+              break;
+            }
+          }
+        }
+      }
+
+      if (matchedBox) {
+        const pad = 10;
+        const w = baseCanvas.width, h = baseCanvas.height;
+        const finalX = Math.max(0, matchedBox.x0 - pad);
+        const finalY = Math.max(0, matchedBox.y0 - pad);
+        const finalW = Math.min(w - finalX, (matchedBox.x1 - matchedBox.x0) + pad * 2);
+        const finalH = Math.min(h - finalY, (matchedBox.y1 - matchedBox.y0) + pad * 2);
+
+        maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+        maskCtx.fillRect(finalX, finalY, finalW, finalH);
+        render();
+        saveSnapshot(`OCR 定位: ${q}`);
+        setAppStatus('active', `✓ OCR 精准锁定「${q}」坐标`);
+        showToast(`✓ OCR 精准定位到「${q}」！`, 'success');
+      } else {
+        locateTextByGradient(false);
+        showToast(`OCR 未扫到文本，已启用边缘自适应定位`, 'success');
+      }
+    } catch (err) {
+      console.warn('OCR error, fallback to gradient locator', err);
+      locateTextByGradient(false);
+    }
+  }
+
+  $('btnLocateText').onclick = () => locateTextByGradient(false);
+  $('btnOcrText').onclick = () => runOcrRecognition();
+  $('btnAutoRemoveText').onclick = () => locateTextByGradient(true);
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => {
+      $('inputTextWatermark').value = chip.dataset.txt;
+      if (currentIndex >= 0) locateTextByGradient(false);
+    };
+  });
+
+  // 预设角标
+  $('presetGemini').onclick = () => {
     if (currentIndex < 0) return;
+    const w = baseCanvas.width, h = baseCanvas.height;
+    const size = (w > 1024) ? 104 : 54, margin = (w > 1024) ? 60 : 30;
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - margin - size, h - margin - size, size, size);
+    render(); saveSnapshot('Gemini 星标预设');
+  };
+  $('presetAIText').onclick = () => {
+    if (currentIndex < 0) return;
+    const w = baseCanvas.width, h = baseCanvas.height;
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - Math.round(w * 0.28) - 16, h - Math.round(h * 0.12) - 16, Math.round(w * 0.28), Math.round(h * 0.12));
+    render(); saveSnapshot('AI生成字样预设');
+  };
+  $('presetBottomLeft').onclick = () => {
+    if (currentIndex < 0) return;
+    const w = baseCanvas.width, h = baseCanvas.height, s = Math.round(Math.min(w, h) * 0.28);
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(16, h - s - 16, s, s);
+    render(); saveSnapshot('左下角区域');
+  };
+  $('presetBottomRight').onclick = () => {
+    if (currentIndex < 0) return;
+    const w = baseCanvas.width, h = baseCanvas.height, s = Math.round(Math.min(w, h) * 0.28);
+    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+    maskCtx.fillRect(w - s - 16, h - s - 16, s, s);
+    render(); saveSnapshot('右下角区域');
+  };
+
+  // 单张消除
+  function executeRemoval() {
+    if (currentIndex < 0) return showToast('请先导入图片', 'error');
     const w = baseCanvas.width, h = baseCanvas.height;
     const maskData = maskCtx.getImageData(0, 0, w, h).data;
     let minX = w, minY = h, maxX = -1, maxY = -1, count = 0;
@@ -1065,9 +1720,9 @@ self.onmessage = function(e) {
         }
       }
     }
-    if (count === 0) return showToast('请先圈选水印区域', 'error');
+    if (count === 0) return showToast('请先用画笔、矩形或文字定位圈选需要消除的水印区域', 'error');
 
-    const pad = 20;
+    const pad = activeEngine === 'telea' ? 24 : 16;
     minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
     maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
 
@@ -1077,6 +1732,8 @@ self.onmessage = function(e) {
 
     window._lastROI = { minX, minY, roiW, roiH };
     $('btnExecute').disabled = true;
+    setAppStatus('working', `正在调用 ${activeEngine.toUpperCase()} 引擎计算...`);
+    progressWrap.style.display = 'block'; progressInner.style.width = '5%';
 
     worker.postMessage({
       type: 'process',
@@ -1090,111 +1747,45 @@ self.onmessage = function(e) {
   }
   $('btnExecute').onclick = executeRemoval;
 
-  // 文字水印定位
-  function locateText(textQuery, autoRemove = false) {
-    if (currentIndex < 0) return;
-    const q = textQuery.trim();
-    if (!q) return;
+  // 批量全自动处理全部队列
+  async function batchProcessAll() {
+    if (imageQueue.length === 0) return showToast('队列暂无图片', 'error');
+    setAppStatus('working', `开始批量处理全部 ${imageQueue.length} 张图片...`);
+    $('btnBatchProcessAll').disabled = true;
 
-    const imgW = baseCanvas.width, imgH = baseCanvas.height;
-    const defW = Math.round(imgW * 0.25), defH = Math.round(imgH * 0.08);
-    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
-    maskCtx.fillRect(imgW - defW - 16, imgH - defH - 16, defW, defH);
-    render();
-    if (autoRemove) executeRemoval();
-    showToast(`已自动锁定「${q}」`, 'success');
+    for (let i = 0; i < imageQueue.length; i++) {
+      loadQueueIndex(i);
+      setAppStatus('working', `正在处理 [${i + 1}/${imageQueue.length}]: ${imageQueue[i].name}...`);
+      locateTextByGradient(false);
+      await new Promise(resolve => {
+        executeRemoval();
+        const checkDone = setInterval(() => {
+          if (imageQueue[i].status === 'done') {
+            clearInterval(checkDone);
+            resolve();
+          }
+        }, 80);
+      });
+    }
+
+    $('btnBatchProcessAll').disabled = false;
+    setAppStatus('active', `✓ 已完成全部 ${imageQueue.length} 张图片处理！`);
+    showToast(`✓ 全部 ${imageQueue.length} 张图片批量修复完毕！`, 'success');
   }
-  $('btnLocateText').onclick = () => locateText($('inputTextWatermark').value, false);
-  $('btnAutoRemoveText').onclick = () => locateText($('inputTextWatermark').value, true);
+  $('btnBatchProcessAll').onclick = batchProcessAll;
 
-  document.querySelectorAll('.chip').forEach(chip => {
-    chip.onclick = () => {
-      $('inputTextWatermark').value = chip.dataset.txt;
-      locateText(chip.dataset.txt, false);
-    };
-  });
-
-  // 预设
-  $('presetGemini').onclick = () => {
+  // 导出
+  $('btnDownloadSingle').onclick = () => {
     if (currentIndex < 0) return;
-    const w = baseCanvas.width, h = baseCanvas.height;
-    const size = (w > 1024) ? 104 : 54;
-    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
-    maskCtx.fillRect(w - size - 30, h - size - 30, size, size);
-    render();
-  };
-  $('presetAIText').onclick = () => {
-    if (currentIndex < 0) return;
-    const w = baseCanvas.width, h = baseCanvas.height;
-    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
-    maskCtx.fillRect(w - Math.round(w * 0.28) - 16, h - Math.round(h * 0.12) - 16, Math.round(w * 0.28), Math.round(h * 0.12));
-    render();
-  };
-  $('presetBottomLeft').onclick = () => {
-    if (currentIndex < 0) return;
-    const w = baseCanvas.width, h = baseCanvas.height, s = Math.round(Math.min(w, h) * 0.25);
-    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
-    maskCtx.fillRect(16, h - s - 16, s, s);
-    render();
-  };
-  $('presetBottomRight').onclick = () => {
-    if (currentIndex < 0) return;
-    const w = baseCanvas.width, h = baseCanvas.height, s = Math.round(Math.min(w, h) * 0.25);
-    maskCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
-    maskCtx.fillRect(w - s - 16, h - s - 16, s, s);
-    render();
+    const a = document.createElement('a');
+    a.href = baseCanvas.toDataURL('image/png');
+    a.download = `cleaned_${imageQueue[currentIndex].name}`;
+    a.click();
+    showToast('✓ 已导出当前图片', 'success');
   };
 
-  // 画布交互
-  viewport.addEventListener('mousedown', e => {
-    if (currentIndex < 0) return;
-    if (e.button === 1 || isSpacePressed || activeTool === 'pan') {
-      isPanning = true; panStartX = e.clientX - panX; panStartY = e.clientY - panY;
-      viewport.classList.add('is-panning'); return;
-    }
-    if (e.button !== 0) return;
-    isDrawing = true;
-    const sRect = stage.getBoundingClientRect();
-    const pos = { x: (e.clientX - sRect.left) / zoom, y: (e.clientY - sRect.top) / zoom };
-
-    maskCtx.save();
-    maskCtx.lineCap = 'round';
-    maskCtx.lineWidth = brushSize;
-    maskCtx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
-    maskCtx.beginPath();
-    maskCtx.arc(pos.x, pos.y, brushSize / 2, 0, Math.PI * 2);
-    maskCtx.stroke();
-    maskCtx.restore();
-    lastPos = pos;
-    render();
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (isPanning) {
-      panX = e.clientX - panStartX; panY = e.clientY - panStartY;
-      updateViewportTransform(); return;
-    }
-    if (!isDrawing || currentIndex < 0) return;
-    const sRect = stage.getBoundingClientRect();
-    const pos = { x: (e.clientX - sRect.left) / zoom, y: (e.clientY - sRect.top) / zoom };
-
-    maskCtx.save();
-    maskCtx.lineCap = 'round';
-    maskCtx.lineWidth = brushSize;
-    maskCtx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
-    maskCtx.beginPath();
-    maskCtx.moveTo(lastPos.x, lastPos.y);
-    maskCtx.lineTo(pos.x, pos.y);
-    maskCtx.stroke();
-    maskCtx.restore();
-    lastPos = pos;
-    render();
-  });
-
-  window.addEventListener('mouseup', () => { isPanning = false; isDrawing = false; });
-
-  // 批量导出
   $('btnBatchExportAll').onclick = () => {
+    if (imageQueue.length === 0) return showToast('队列暂无图片', 'error');
     let count = 0;
     imageQueue.forEach((item, i) => {
       const c = item.cleanedCanvas || item.img;
@@ -1204,24 +1795,23 @@ self.onmessage = function(e) {
       tempCanvas.getContext('2d').drawImage(c, 0, 0);
       a.href = tempCanvas.toDataURL('image/png');
       a.download = `cleaned_${item.name}`;
-      setTimeout(() => a.click(), i * 200);
+      setTimeout(() => a.click(), i * 220);
       count++;
     });
     showToast(`正在批量下载 ${count} 张处理后的图片`, 'success');
   };
 
-  $('btnDownloadSingle').onclick = () => {
-    if (currentIndex < 0) return;
-    const a = document.createElement('a');
-    a.href = baseCanvas.toDataURL('image/png');
-    a.download = `cleaned_${imageQueue[currentIndex].name}`;
-    a.click();
-  };
+  function setAppStatus(dotClass, text) {
+    statusDot.className = 'status-dot ' + dotClass;
+    statusText.textContent = text;
+  }
 
+  let toastTimer = null;
   function showToast(msg, type = '') {
     toastMsg.textContent = msg;
     toastBox.className = 'toast show ' + type;
-    setTimeout(() => { toastBox.className = 'toast ' + type; }, 2200);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastBox.className = 'toast ' + type; }, 2400);
   }
 })();
 </script>
